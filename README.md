@@ -36,7 +36,7 @@ We use a _JSON_ Java library to create _JSON_ objects to respond to the requests
 * Ivo Fernandes - web interface, _JSON_ parsing, lexical analysis, syntactic analysis.
 * Carlos Samouco - Syntactic analysis, creation of the Java Server and data flow management, web interface.
 *	Gonçalo Lopes - Lexical Analysis, Syntactic Analysis, Semantic Analysis, generating _JSON_ for _AST_
-* José Teixeira - Lexical Analysis, generating _JSON_ from post-semantic analysis data structure to the web interface, Google Maps analysis
+* José Teixeira - Lexical Analysis, generating _JSON_ from post-semantic analysis data structure to the web interface, Google Maps _API_ analysis
 
 ### How to use
 
