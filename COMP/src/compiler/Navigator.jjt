@@ -75,7 +75,7 @@ public class Navigator
   //list of defined options, for each start of the defined option, the col is known, and the col for each parameter is also known
   private static LinkedList<Pair<Pair<String, Integer>, LinkedList<Pair<String, Integer>>>> defined_options;
 
-  private static semanticAnalysis(){
+  private static void semanticAnalysis(){
     int check, inner_check, inner_inner_check;
     Pair<String, Integer> error;
 
@@ -277,6 +277,7 @@ public class Navigator
     {
       SimpleNode n = new Navigator(new ByteArrayInputStream(text.getBytes())).Start();
       ast_json = n.dump();
+      semanticAnalysis();
     }
     catch(TokenMgrError e){
       errors.add(new Pair("Special characters unsuported", e.getCol()));
