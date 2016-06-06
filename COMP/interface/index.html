@@ -25,7 +25,7 @@
     <div class="container-fluid" style="height:100%;width=100%">
 
       <div class="page-header">
-        <h1>COMP 15/16 <small>NAVSQL</small></h1>
+        <h1>COMP 15/16 <small>NAVQDSL</small></h1>
       </div>
       <div class="row">
         <div class="col-md-12 col-lg-12" style="margin: 1rem 0 ">
@@ -36,17 +36,19 @@
 				<ul class="example-querys">
 					<li>I want to go from Rua Dr Roberto Frias, Porto to Av Rovisco Pais 1, Lisboa and go through Aveiro ; Coimbra avoid tolls highways show gyms near destination ; bars near origin</li>
 					<li>Show restaurants near aveiro ; clubs near coimbra</li>
+          <li>From Porto to Lisbon show nightclubs near Coimbra ; restaurants near destination</li>
 					<li>From porto to lisbon by train fewer transfers leaving at 2016-07-15 15:15</li>
-					<li>From Porto to Lisbon and go through Coimbra ; Viseu  optimize route</li>					
-					<li>From Porto to Lisbon and go through Coimbra ; Viseu multiple routes</li>
-				</ul> 
+          <li>From Porto to Lisbon and go through Coimbra ; Guarda, Portugal ; Castelo Branco; Viseu ;  Bragança</li>
+					<li>From Porto to Lisbon and go through Coimbra ; Guarda, Portugal ; Castelo Branco; Viseu ;  Bragança optimize route</li>
+					<li>From Porto to Lisbon and go through Coimbra ; Guarda, Portugal ; Castelo Branco; Viseu ;  Bragança multiple routes</li>
+				</ul>
 				<h4 class="query-type">Invalid Queries</h4>
 				<ul class="example-querys">
 					<li>I want to go from Porto to Porto</li>
-					<li>I want to go from Porto to Monte Gordo and go through Lisboa; Lisboa; Aveiro by car on foot</li>	
+					<li>I want to go from Porto to Monte Gordo and go through Lisboa; Lisboa; Aveiro by car on foot</li>
 					<li>Show bars near origin</li>
-					<li>From porto to lisbon by car fewer transfers departure at 2016-07-15 15:15 leaving at 2016-08-15 20:15</li>			
-				</ul> 
+					<li>From porto to lisbon by car fewer transfers departure at 2016-07-15 15:15 leaving at 2016-08-15 20:15</li>
+				</ul>
             </div>
           </div>
         </div>
@@ -87,15 +89,15 @@
     var markers = [];
     var map;
     var infowindow;
-    
+
     $(document).ready(function() {
-		$(".example-querys li").click(function() {		
+		$(".example-querys li").click(function() {
 			var query = $(this).text();
 			$("input[type='text']").val(query);
-			sendPacket();					
+			sendPacket();
 		});
 	});
-    
+
     function initMap() {
       map = new google.maps.Map(document.getElementById('map'), {
         center: {lat: 41.1579, lng: -8.6291},
@@ -124,7 +126,7 @@
 		if(errors == null){
 			return false;
 		}
-		var query = $("input[type='text']").val();		
+		var query = $("input[type='text']").val();
 		if(errors.length > 0){
 			$('#este').append('<div class="alert alert-danger" id="error_msg"></div>');
 		}
@@ -132,9 +134,9 @@
 		for (error of errors){
 			$('#error_msg').append("</p>" + "<p>" + error.error + " on column: " + error.col + "</p>" + "<p>" + query + "</p>" + "<p>" + stringBuilder(' ',error.col)+"^");
 		}
-		return true;		
+		return true;
 	}
-		
+
     function sendPacket() {
       $("#query_tree").html("");
       setMapOnAll(null);
@@ -154,12 +156,12 @@
           var tree_struct = {};
           tree_struct.chart = {container: "#query_tree"};
           tree_struct.nodeStructure = data.nodeStructure;
-          new Treant(tree_struct);	
-        
+          new Treant(tree_struct);
+
 		  if(updateErrorDialog(data.errors)) {
-			return;	
+			return;
 		  }
-		  
+
           //PLACES
           if(data.places){
             for(var i=0;i<data.places.length;i++){
@@ -220,7 +222,7 @@
             }
             console.log("New");
             console.log(data);
-            displayRoute(data.routes['origin'],data.routes['destination'],api_travel_mode,data.routes['waypoints'],data.routes.optimizeWaypoints,data.routes.avoidHighways,data.routes.avoidTolls,data.routes.transitOptions,data.routes.drivingOptions);	            
+            displayRoute(data.routes['origin'],data.routes['destination'],api_travel_mode,data.routes['waypoints'],data.routes.optimizeWaypoints,data.routes.avoidHighways,data.routes.avoidTolls,data.routes.transitOptions,data.routes.drivingOptions);
           }
         },
         error: function(request, status, error) {
@@ -294,12 +296,12 @@
       google.maps.event.addListener(marker, 'click', function() {
         infowindow.setContent(place.name);
         infowindow.open(map, this);
-      });           
+      });
     }
 
     </script>
   </script>
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBnSs7UKZS6x6VD9wHuL7gxKn2mM3xcjkk&callback=initMap&libraries=places" async defer></script> 
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBnSs7UKZS6x6VD9wHuL7gxKn2mM3xcjkk&callback=initMap&libraries=places" async defer></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
   <script src="./Treant.js"></script>
   <script src="./raphael.js"></script>

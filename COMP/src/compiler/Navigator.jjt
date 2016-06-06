@@ -163,7 +163,7 @@ public class Navigator
     }
     //checking waypoints
     int waypoints_size = waypoints.size();
-    for(check = 0; check < waypoints_size - 1; check++){     
+    for(check = 0; check < waypoints_size - 1; check++){
       if(waypoints.get(check).getX().equals(waypoints.get(check + 1).getX())){
         errors.add(new Pair("Same waypoint " + waypoints.get(check).getX() + " in a row", waypoints.get(check).getY()));
       }
@@ -177,7 +177,7 @@ public class Navigator
         if(waypoints.size() > 0)        {			 places_near.set(check, new Pair(waypoints.getFirst().getX(), error.getY()));
         }
         else        {			 errors.add(new Pair("Origin Not Set!", error.getY()));
-        }       
+        }
       }
       else if(places_near.get(check).getX() == DESTINATION_VAL){
         if(waypoints.size() > 0)
@@ -187,7 +187,7 @@ public class Navigator
         else
         {
 			 errors.add(new Pair("Destination Not Set!", error.getY()));
-        }        
+        }
       }
     }
 
@@ -379,114 +379,6 @@ public class Navigator
     returnObj.put("nodeStructure", ast_json);
     System.out.println(ast_json);
     return returnObj.toString();
-    /*int i = 0;
-    JSONObject waypointsJSON = new JSONObject();
-    JSONArray waypointsSubArr = new JSONArray();
-
-    waypointsJSON.put("source", waypoints.getFirst().getX());
-    waypointsJSON.put("destiny", waypoints.getLast().getX());
-    for(i = 1; i < waypoints.size() - 1; i++){
-    JSONObject waypointsJSONsub = new JSONObject();
-    waypointsJSONsub.put("waypoint", waypoints.get(i).getX());
-    waypointsSubArr.put(waypointsJSONsub);
-  }
-
-  waypointsJSON.put("sub_waypoints",waypointsSubArr);
-
-  JSONArray waypointsArr = new JSONArray();
-  waypointsArr.put(waypointsJSON);
-
-
-  JSONArray locomotionArr = new JSONArray();
-  for(i = 0; i < locomotions.size(); i++){
-  JSONObject locomotionJSON = new JSONObject();
-  locomotionJSON.put("locomotion", locomotions.get(i).getX());
-  locomotionArr.put(locomotionJSON);
-}
-
-JSONObject placesJSON = new JSONObject();
-JSONArray placesArr = new JSONArray();
-for(i = 0; i < places.size(); i++){
-for(int j = 0 ; j < places.get(i).size(); j++){
-placesJSON.put("place", places.get(i).get(j).getX());
-}
-placesArr.put(placesJSON);
-placesJSON = new JSONObject();
-}
-
-
-JSONArray placesNearArr = new JSONArray();
-for(i = 0 ; i < places_near.size(); i++){
-JSONObject placesNearJSON = new JSONObject();
-placesNearJSON.put("place", places_near.get(i).getX());
-placesNearArr.put(placesNearJSON);
-}
-
-
-
-
-
-JSONArray undefinedOptionsArr = new JSONArray();
-for(i = 0 ; i < undefined_options.size(); i++){
-JSONObject undefinedOptionsJSON = new JSONObject();
-undefinedOptionsJSON.put("undefined_option", undefined_options.get(i).getX());
-undefinedOptionsArr.put(undefinedOptionsJSON);
-}
-
-JSONArray definedOptionsArr = new JSONArray();
-
-for(i = 0; i < defined_options.size() ; i++){
-switch(defined_options.get(i).getX().getX()){
-case "avoid":
-for(int j = 0; j < defined_options.get(i).getY().size() ; j++){
-JSONObject definedOptionsAvoid = new JSONObject();
-definedOptionsAvoid.put("avoid", defined_options.get(i).getY().get(j).getX());
-definedOptionsArr.put(definedOptionsAvoid);
-}
-break;
-case "departure_time":
-for(int j = 0; j < defined_options.get(i).getY().size() ; j++){
-JSONObject definedOptionsDeparture = new JSONObject();
-definedOptionsDeparture.put("departure", defined_options.get(i).getY().get(j).getX());
-definedOptionsArr.put(definedOptionsDeparture);
-}
-break;
-case "arrival_time":
-for(int j = 0; j < defined_options.get(i).getY().size() ; j++){
-JSONObject definedOptionsArrival = new JSONObject();
-definedOptionsArrival.put("arrival", defined_options.get(i).getY().get(j).getX());
-definedOptionsArr.put(definedOptionsArrival);
-}
-break;
-default:
-System.out.println("Erro encontrado =============!=============" + defined_options.get(i).getX().getX());
-break;
-}
-}
-
-JSONArray errorsArr = new JSONArray();
-JSONObject errorsJSON = new JSONObject();
-for(i = 0 ; i < errors.size(); i++){
-JSONObject error = new JSONObject();errorsJSON.put("error", errors.get(i).getX());
-errorsArr.put(errorsJSON);
-}
-
-
-
-
-JSONObject mainObj = new JSONObject();
-
-//mainObj.put("keywords", byKeywordArr);
-mainObj.put("locomotion", locomotionArr);
-mainObj.put("waypoints",waypointsArr);
-mainObj.put("places", placesArr);
-mainObj.put("places_near", placesNearArr);
-mainObj.put("definedOptions", definedOptionsArr);
-mainObj.put("undefinedOptions", undefinedOptionsArr);
-mainObj.put("errors", errorsArr);
-
-System.out.println(mainObj.toString());
-return mainObj.toString();*/
 }
 }
 
