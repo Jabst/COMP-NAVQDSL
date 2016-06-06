@@ -53,13 +53,10 @@ Note that Internet connection is needed.
 
 ### Pros
 
-A fun implementation of a compiler course project.
-
-Good interface and error display.
-
-Fully functional as a NAVQDSL.  
-
-AST visual display.
+* A fun implementation of a compiler course project.
+* Good interface and error display.
+* Fully functional as a NAVQDSL.  
+* AST visual display.
 
 
 ### Cons
