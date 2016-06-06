@@ -62,3 +62,5 @@ Note that Internet connection is needed.
 ### Cons
 
 * The Treant _API_ does not support some special characters on its tree display(for instance, ç)
+* The _API_ does not support the query for airplanes
+* It is needed to have a standalone java application (the server) running on the user's machine
