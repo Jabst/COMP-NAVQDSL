@@ -1,0 +1,2 @@
+Main-Class: server.Server
+Class-Path: json-20140107.jar

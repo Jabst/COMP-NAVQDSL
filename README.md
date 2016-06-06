@@ -1,5 +1,5 @@
 # NAVQDSL
-
+[Project Github](https://github.com/Jabst/COMP-NAVQDSL)
 ## 6NAVQDSL
 * Ivo Fernandes , up201303199, Grade: 18, Contribution: 25%
 * Carlos Samouco, up201305187, Grade: 18, Contribution: 25%
@@ -45,11 +45,14 @@ For the web browser to communicate with our native Java program it is needed to 
 So step by step the user has to:
 
 * Open the web interface (located on /interface/index.html)
-* Start the Java application (run /compiler/Server.java)
+* Start the Java application (run 6NAVQDSL.jar)
 
 After these steps the user can type in the navigation query on the web interface, and view the results on the map.
 
 Note that Internet connection is needed to communicate with the Google _APIs_ for maps and places.
+
+### Tests
+We include in the web interface some example queries both with and without errors.
 
 ### Pros
 
