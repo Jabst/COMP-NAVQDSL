@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>COMP 15/16</title>
+
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+  <link rel="stylesheet" href="./Treant.css">
+  <link rel="stylesheet" href="./style.css">
+  <style>
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  </style>
+
+</head>
+<body>
+  <div class="container-fluid" style="width:90%;height:100%;margin:0 auto">
+    <div class="container-fluid" style="height:100%;width=100%">
+
+      <div class="page-header">
+        <h1>COMP 15/16 <small>NAVSQL</small></h1>
+      </div>
+      <div class="row">
+        <div class="col-md-12 col-lg-12" style="margin: 1rem 0 ">
+          <div class="panel panel-default">
+            <div class="panel-heading">Query examples</div>
+            <div class="panel-body bg-info">
+				<h4 class="query-type">Valid Queries</h4>
+				<ul class="example-querys">
+					<li>I want to go from Rua Dr Roberto Frias, Porto to Av Rovisco Pais 1, Lisboa and go through Aveiro ; Coimbra avoid tolls highways show gyms near destination ; bars near origin</li>
+					<li>Show restaurants near aveiro ; clubs near coimbra</li>
+					<li>From porto to lisbon by train fewer transfers leaving at 2016-07-15 15:15</li>
+					<li>From Porto to Lisbon and go through Coimbra ; Viseu  optimize route</li>					
+					<li>From Porto to Lisbon and go through Coimbra ; Viseu multiple routes</li>
+				</ul> 
+				<h4 class="query-type">Invalid Queries</h4>
+				<ul class="example-querys">
+					<li>I want to go from Porto to Porto</li>
+					<li>I want to go from Porto to Monte Gordo and go through Lisboa; Lisboa; Aveiro by car on foot</li>	
+					<li>Show bars near origin</li>
+					<li>From porto to lisbon by car fewer transfers departure at 2016-07-15 15:15 leaving at 2016-08-15 20:15</li>			
+				</ul> 
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-12 col-lg-12">
+          <div class="form-inline" id="este">
+            <input type="text" class="form-control" placeholder="Navigation Query" style="width:90%">
+            <button onclick="sendPacket()" class="btn btn-primary" style="width:9%"><span class="glyphicon glyphicon-search" aria-hidden="true"></span></button>
+          </div>
+        </div>
+      </div>
+      <br>
+      <br>
+      <div class="row" style="height:80%">
+        <div class="col-md-7 col-lg-7" style="height:100%">
+          <div id="map" style="height:100%"></div>
+        </div>
+        <div class="col-md-offset-1 col-lg-offset-1 col-md-4 col-lg-4" style="height: 100%">
+          <h3>Query Structure</h3>
+          <div class="chart" id="query_tree"></div>
+        </div>
+      </div>
+
+    </div>
+
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script>
+    const DRIVING_VAL = "driving";
+    const WALKING_MODE_VAL = "walking";
+    const BICYCLE_VAL = "bicycling";
+    const TRANSIT_VAL = "transit";
+    const SUBWAY_VAL = "subway";
+    const TRAIN_VAL = "train";
+    const TRAM_VAL = "tram";
+    const BUS_VAL = "bus";
+    const RAIL_VAL = "rail";
+    var markers = [];
+    var map;
+    var infowindow;
+    
+    $(document).ready(function() {
+		$(".example-querys li").click(function() {		
+			var query = $(this).text();
+			$("input[type='text']").val(query);
+			sendPacket();					
+		});
+	});
+    
+    function initMap() {
+      map = new google.maps.Map(document.getElementById('map'), {
+        center: {lat: 41.1579, lng: -8.6291},
+        zoom: 8
+      });
+      infowindow = new google.maps.InfoWindow();
+    }
+
+    function setMapOnAll(map) {
+      for (var i = 0; i < markers.length; i++) {
+        markers[i].setMap(map);
+      }
+    }
+
+	function stringBuilder(char, times){
+		var ret = "";
+		for(var i = 0 ; i < times ; i++){
+			ret += char;
+		}
+
+		return ret;
+	}
+
+	function updateErrorDialog(errors){
+		$("#error_msg").remove();
+		if(errors == null){
+			return false;
+		}
+		var query = $("input[type='text']").val();		
+		if(errors.length > 0){
+			$('#este').append('<div class="alert alert-danger" id="error_msg"></div>');
+		}
+		$('#error_msg').html("");
+		for (error of errors){
+			$('#error_msg').append("</p>" + "<p>" + error.error + " on column: " + error.col + "</p>" + "<p>" + query + "</p>" + "<p>" + stringBuilder(' ',error.col)+"^");
+		}
+		return true;		
+	}
+		
+    function sendPacket() {
+      $("#query_tree").html("");
+      setMapOnAll(null);
+      markers = [];
+      initMap();
+      var input = $("input[type='text']").val();
+      if(input == "") {
+		return;
+      }
+      $.ajax({
+        type: 'post',
+        dataType: 'json',
+        data: input,
+        url: 'http://localhost:8080',
+        success: function(data) {
+          console.log(data);
+          var tree_struct = {};
+          tree_struct.chart = {container: "#query_tree"};
+          tree_struct.nodeStructure = data.nodeStructure;
+          new Treant(tree_struct);	
+        
+		  if(updateErrorDialog(data.errors)) {
+			return;	
+		  }
+		  
+          //PLACES
+          if(data.places){
+            for(var i=0;i<data.places.length;i++){
+              console.log("place: "+data.places[i]['place']+" ,near: "+data.places[i]['near']);
+              displayPlaces(data.places[i]['near'],data.places[i]['place']);
+            }
+          }
+          //routes
+          if(data.routes){
+            var api_travel_mode;
+            switch(data.routes['travelMode']){
+              case DRIVING_VAL:
+              api_travel_mode = google.maps.TravelMode.DRIVING;
+              break;
+              case WALKING_MODE_VAL:
+              api_travel_mode = google.maps.TravelMode.WALKING;
+              break;
+              case BICYCLE_VAL:
+              api_travel_mode = google.maps.TravelMode.BICYCLING;
+              break;
+              case TRANSIT_VAL:
+              api_travel_mode = google.maps.TravelMode.TRANSIT;
+              break;
+            }
+            if(data.routes.transitOptions){
+              if(data.routes.transitOptions['arrivalTime']){
+                data.routes.transitOptions['arrivalTime']=new Date(data.routes.transitOptions['arrivalTime']);
+              }
+              if(data.routes.transitOptions['departureTime']){
+                data.routes.transitOptions['departureTime']=new Date(data.routes.transitOptions['departureTime']);
+              }
+              if(data.routes.transitOptions['routingPreference']){
+                if(data.routes.transitOptions['routingPreference'] == "fewer_transfers"){
+                  data.routes.transitOptions['routingPreference'] = google.maps.TransitRoutePreference.FEWER_TRANSFERS;
+                }
+                if(data.routes.transitOptions['routingPreference'] == "less_walking"){
+                  data.routes.transitOptions['routingPreference'] = google.maps.TransitRoutePreference.LESS_WALKING;
+                }
+              }
+              if(data.routes.transitOptions['modes']){
+                for(var i=0;i<data.routes.transitOptions['modes'].length;i++){
+                  switch(data.routes.transitOptions['modes'][i]){
+                    case "subway":
+                    data.routes.transitOptions['modes'][i]=google.maps.TransitMode.SUBWAY;
+                    break;
+                    case "train":
+                    data.routes.transitOptions['modes'][i]=google.maps.TransitMode.TRAIN;
+                    break;
+                    case "tram":
+                    data.routes.transitOptions['modes'][i]=google.maps.TransitMode.TRAM;
+                    break;
+                    case "bus":
+                    data.routes.transitOptions['modes'][i]=google.maps.TransitMode.BUS;
+                    break;
+                  }
+                }
+              }
+            }
+            console.log("New");
+            console.log(data);
+            displayRoute(data.routes['origin'],data.routes['destination'],api_travel_mode,data.routes['waypoints'],data.routes.optimizeWaypoints,data.routes.avoidHighways,data.routes.avoidTolls,data.routes.transitOptions,data.routes.drivingOptions);	            
+          }
+        },
+        error: function(request, status, error) {
+          alert(request.responseText + status + error);
+        }
+      });
+    }
+    //api function for routes, origin destination and travelMode necessary
+    function displayRoute(origin, destination, travelMode, waypoints, optimizeWaypoints, avoidHighways, avoidTolls, transitOptions, drivingOptions){
+      var directionsDisplay = new google.maps.DirectionsRenderer({
+        map: map
+      });
+
+      // Set destination, origin and travel mode.
+      var request = {
+        destination: destination,
+        origin: origin,
+        travelMode: travelMode,
+        waypoints: waypoints,
+        optimizeWaypoints: optimizeWaypoints,
+        avoidHighways: avoidHighways,
+        avoidTolls: avoidTolls,
+        transitOptions: transitOptions,
+        drivingOptions: drivingOptions
+      };
+
+      // Pass the directions request to the directions service.
+      var directionsService = new google.maps.DirectionsService();
+      directionsService.route(request, function(response, status) {
+        if (status == google.maps.DirectionsStatus.OK) {
+          // Display the route on the map.
+          directionsDisplay.setDirections(response);
+        }
+      });
+    }
+
+    //api function for places
+    function displayPlaces(location, place_query){
+      geocoder = new google.maps.Geocoder();
+      geocoder.geocode( { 'address': location}, function(results, status) {
+        if (status == google.maps.GeocoderStatus.OK) {
+          console.log(results);
+          var request = {
+            location: results[0].geometry.location,
+            radius: '500',
+            query: place_query
+          };
+
+          service = new google.maps.places.PlacesService(map);
+          service.textSearch(request, function(results, status){
+            if (status == google.maps.places.PlacesServiceStatus.OK) {
+              for (var i = 0; i < results.length; i++) {
+                var place = results[i];
+                createMarker(results[i]);
+              }
+            }
+            else {
+              alert("Geocode was not successful for the following reason: " + status);
+            }
+          });
+        }
+      });
+    }
+    function createMarker(place) {
+      var placeLoc = place.geometry.location;
+      var marker = new google.maps.Marker({
+        map: map,
+        position: place.geometry.location
+      });
+      markers.push(marker);
+      google.maps.event.addListener(marker, 'click', function() {
+        infowindow.setContent(place.name);
+        infowindow.open(map, this);
+      });           
+    }
+
+    </script>
+  </script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBnSs7UKZS6x6VD9wHuL7gxKn2mM3xcjkk&callback=initMap&libraries=places" async defer></script> 
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+  <script src="./Treant.js"></script>
+  <script src="./raphael.js"></script>
+</div>
+</body>
+</html>

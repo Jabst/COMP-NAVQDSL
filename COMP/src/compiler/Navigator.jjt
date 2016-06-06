@@ -1,0 +1,711 @@
+
+/**
+import com.sun.org.apache.xpath.internal.operations.String;
+* JJTree template file created by SF JavaCC plugin 1.5.28+ wizard for JavaCC 1.5.0+
+*/
+options
+{
+  static = false;
+  LOOKAHEAD = 1;
+  IGNORE_CASE = true;
+ UNICODE_INPUT=true;
+}
+
+PARSER_BEGIN(Navigator)
+package compiler;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.util.LinkedList;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
+
+public class Navigator
+{
+  private static final int WAYPOINT = 0;
+  private static final int PLACE = 1;
+  private static final int PLACENEAR = 2;
+  private static final String ORIGIN_VAL = "origin";
+  private static final String DESTINATION_VAL = "destination";
+  private static final String DEPARTURE_VAL = "departure_time";
+  private static final String ARRIVAL_VAL = "arrival_time";
+  private static final String WALKING_VAL = "less_walking";
+  private static final String TRANSFER_VAL = "fewer_transfers";
+  private static final String DRIVING_VAL = "driving";
+  private static final String WALKING_MODE_VAL = "walking";
+  private static final String BICYCLE_VAL = "bicycling";
+  private static final String TRANSIT_VAL = "transit";
+  private static final String SUBWAY_VAL = "subway";
+  private static final String TRAIN_VAL = "train";
+  private static final String TRAM_VAL = "tram";
+  private static final String BUS_VAL = "bus";
+  private static final String RAIL_VAL = "rail";
+  private static final String TOLLS_VAL = "tolls";
+  private static final String HIGHWAY_VAL = "highways";
+  private static final String FERRIES_VAL = "ferries";
+  private static final String OPTIMIZE_VAL = "optimize";
+  private static final String MULTIPLE_VAL = "multiple";
+
+
+  //used by google maps with these names
+  private static String travel_mode = DRIVING_VAL;
+  private static String transit_mode = null;
+  private static boolean optimize_route = false;
+  private static boolean alternatives = false;
+
+  private static JSONObject ast_json = null;
+
+
+  //list of errors
+  private static LinkedList<Pair<String, Integer>> errors;
+  //list of cols where by keyword starts
+  private static LinkedList<Integer> by_keyword;
+  //list of locomotions and col where each starts
+  private static LinkedList<Pair<String, Integer>> locomotions;
+  //list of waypoints and col where each starts
+  private static LinkedList<Pair<String, Integer>> waypoints;
+  //list of list of places and col where each starts, it hold a list of places for every places_near
+  private static LinkedList<LinkedList<Pair<String, Integer>>> places;
+  //list of places_near and col where each starts
+  private static LinkedList<Pair<String, Integer>> places_near;
+  //list of undefined options and col where each starts
+  private static LinkedList<Pair<String, Integer>> undefined_options;
+  //list of defined options, for each start of the defined option, the col is known, and the col for each parameter is also known
+  private static LinkedList<Pair<Pair<String, Integer>, LinkedList<Pair<String, Integer>>>> defined_options;
+
+
+  public static void main(String[] args) throws IOException  {    System.out.println("Reading from standard input...");
+    System.out.println("Enter an expression like: ... from A to B ...");
+
+    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+    String s = br.readLine();
+
+    semanticAnalysis(s);
+  }
+
+  public static String semanticAnalysis(String text) {
+    try
+    {
+      errors = new LinkedList<Pair<String, Integer>>();
+      by_keyword = new LinkedList<Integer>();
+      locomotions = new LinkedList<Pair<String, Integer>>();
+      waypoints = new LinkedList<Pair<String, Integer>>();
+      places = new LinkedList<LinkedList<Pair<String, Integer>>>();
+      places_near = new LinkedList<Pair<String, Integer>>();
+      undefined_options = new LinkedList<Pair<String, Integer>>();
+      defined_options = new LinkedList<Pair<Pair<String, Integer>, LinkedList<Pair<String, Integer>>>>();
+      SimpleNode n = new Navigator(new ByteArrayInputStream(text.getBytes())).Start();
+      ast_json = n.dump();
+    }
+    catch(TokenMgrError e){
+      errors.add(new Pair("Special characters unsuported", e.getCol()));
+    }
+    catch (ParseException e)
+    {
+      errors.add(new Pair("Insert query example here", e.currentToken.endColumn + 2));
+    }
+    int check, inner_check, inner_inner_check;
+    Pair<String, Integer> error;
+
+    //checking by keyword
+    int by_keyword_size = by_keyword.size();
+    for(check = 1; check < by_keyword_size; check++){
+      errors.add(new Pair("Multiple 'by' definitions", by_keyword.get(check)));
+    }
+
+
+    //checking locomotions
+    /*
+    departure or arrival if subway train tram or bus
+    if subway train and tram = rail
+    */
+    if(locomotions.size() == 0){
+      travel_mode = DRIVING_VAL;
+    }
+    else if(locomotions.size() == 3){
+      int[] check_locomotions = {0, 0, 0};
+      int i;
+      for(i = 0; i < locomotions.size(); i++){
+        String mode = locomotions.get(i).getX();
+        if(mode.equals(SUBWAY_VAL)){
+          check_locomotions[0] = 1;
+        }
+        else if (mode.equals(TRAIN_VAL)){
+          check_locomotions[1] = 1;
+        }
+        else if(mode.equals(TRAM_VAL)){
+          check_locomotions[2] = 1;
+        }
+      }
+      for (i = 0; i < locomotions.size(); i++){
+        if(check_locomotions[i] != 1){
+          errors.add(new Pair("Locomotions can only be empty, one value or [subway, train, tram]", locomotions.get(i).getY()));
+        }
+      }
+      travel_mode = TRANSIT_VAL;
+      transit_mode = RAIL_VAL;
+    }
+    else if(locomotions.size() == 1){
+      String locomotion = locomotions.getFirst().getX();
+      if(locomotion.equals(DRIVING_VAL) || locomotion.equals(WALKING_MODE_VAL) || locomotion.equals(BICYCLE_VAL)){
+        travel_mode = locomotion;
+      }
+      else{
+        travel_mode = TRANSIT_VAL;
+        transit_mode = locomotion;
+      }
+    }
+    else{
+      for(int i = 1; i < locomotions.size(); i++){
+            errors.add(new Pair("Locomotions can only be empty, one value or [subway, train, tram]", locomotions.get(i).getY()));
+      }
+    }
+    //checking waypoints
+    int waypoints_size = waypoints.size();
+    for(check = 0; check < waypoints_size - 1; check++){     
+      if(waypoints.get(check).getX().equals(waypoints.get(check + 1).getX())){
+        errors.add(new Pair("Same waypoint " + waypoints.get(check).getX() + " in a row", waypoints.get(check).getY()));
+      }
+    }
+
+    //checking places_near
+    int places_near_size = places_near.size();
+    for(check = 0; check < places_near_size; check++){
+      error = places_near.get(check);
+      if(error.getX() == ORIGIN_VAL){
+        if(waypoints.size() > 0)        {			 places_near.set(check, new Pair(waypoints.getFirst().getX(), error.getY()));
+        }
+        else        {			 errors.add(new Pair("Origin Not Set!", error.getY()));
+        }       
+      }
+      else if(places_near.get(check).getX() == DESTINATION_VAL){
+        if(waypoints.size() > 0)
+        {
+			 places_near.set(check, new Pair(waypoints.getLast().getX(), error.getY()));
+        }
+        else
+        {
+			 errors.add(new Pair("Destination Not Set!", error.getY()));
+        }        
+      }
+    }
+
+    for(check = 0; check < places_near_size; check++){
+      for(inner_check = check + 1; inner_check < places_near_size; inner_check++){
+        error = places_near.get(inner_check);
+        if(places_near.get(check).getX().equals(error.getX())){
+          errors.add(new Pair("Location " + error.getX() + " already defined for places", error.getY()));
+        }
+      }
+    }
+
+    //checking places
+    int places_size = places.size();
+    for(check = 0; check < places_size; check++){
+      LinkedList<Pair<String, Integer>> places_check = places.get(check);
+      int places_check_size = places_check.size();
+      for(inner_check = 0; inner_check < places_check_size; inner_check++){
+        for(inner_inner_check = inner_check + 1; inner_inner_check < places_check_size; inner_inner_check++){
+          error = places_check.get(inner_inner_check);
+          if(places_check.get(inner_check).getX().equals(error.getX())){
+            errors.add(new Pair("Place type " + error.getX() + " already defined for location " + places_near.get(check).getX(), error.getY()));
+          }
+        }
+      }
+    }
+
+    //checking undefined options
+    int undefined_options_size = undefined_options.size();
+    for(check = 0; check < undefined_options_size; check++){
+      for(inner_check = check + 1; inner_check < undefined_options_size; inner_check++){
+        error = undefined_options.get(inner_check);
+        System.out.println(error.getX());
+        if(error.getX().equals(WALKING_VAL) || error.getX().equals(TRANSFER_VAL)){
+          errors.add(new Pair("May only specify LESS_WALKING and FEWER_TRANSFERS if using public transportation", error.getY()));
+        }
+        else if(error.getX().equals(MULTIPLE_VAL)){
+          alternatives = true;
+        }
+        else if(error.getX().equals(OPTIMIZE_VAL)){
+          if(waypoints.size() <= 3){
+            errors.add(new Pair("To optimize route atleast 2 waypoints must be specified", error.getY()));
+          }
+        }
+        if(undefined_options.get(check).getX().equals(error.getX())){
+          errors.add(new Pair("Option " + error.getX() + " already defined", error.getY()));
+        }
+      }
+    }
+
+    //checking defined options
+    boolean has_arrival = false;
+    boolean has_departure = false;
+    int defined_options_size = defined_options.size();
+    for(check = 0; check < defined_options_size; check++){
+      for(inner_check = check + 1; inner_check < defined_options_size; inner_check++){
+        error = defined_options.get(inner_check).getX();
+        if(error.getX().equals(ARRIVAL_VAL)){
+          has_arrival = true;
+          if(!travel_mode.equals(TRANSIT_VAL)){
+            errors.add(new Pair("May only specify one of ARRIVAL or DEPARTURE if using public transportation", error.getY()));
+          }
+          else if(has_departure){
+            errors.add(new Pair("May only specify one of ARRIVAL or DEPARTURE", error.getY()));
+          }
+        }
+        else if(error.getX().equals(DEPARTURE_VAL)){
+          has_departure = true;
+          if(!travel_mode.equals(TRANSIT_VAL)){
+            errors.add(new Pair("May only specify one of ARRIVAL or DEPARTURE if using public transportation", error.getY()));
+          }
+          else if(has_arrival){
+            errors.add(new Pair("May only specify one of ARRIVAL or DEPARTURE", error.getY()));
+          }
+        }
+        if(defined_options.get(check).getX().getX().equals(error.getX())){
+          errors.add(new Pair("Option " + error.getX() + " already defined", error.getY()));
+        }
+      }
+
+      LinkedList<Pair<String, Integer>> defined_options_check = defined_options.get(check).getY();
+      int defined_options_check_size = defined_options_check.size();
+      for(inner_check = 0; inner_check < defined_options_check_size; inner_check++){
+        for(inner_inner_check = inner_check + 1; inner_inner_check < defined_options_check_size; inner_inner_check++){
+          error = defined_options_check.get(inner_inner_check);
+          if(defined_options_check.get(inner_check).getX().equals(error.getX())){
+            errors.add(new Pair("Option " + defined_options.get(check).getX().getX() + " already had parameter " + error.getX() + " defined", error.getY()));
+          }
+        }
+      }
+    }
+    System.out.println("UNDEFINED_OPTION");
+    for(int i = 0 ; i<undefined_options.size() ; i++){
+      System.out.println("X: "+undefined_options.get(i).getX()+" , Y: "+undefined_options.get(i).getY());
+    }
+    System.out.println("DEFINED_OPTION");
+    for(int i = 0 ; i<defined_options.size() ; i++){
+      System.out.println("LEFT: "+defined_options.get(i).getX().getX());
+      for(int j=0;j<defined_options.get(i).getY().size();j++){
+        System.out.println("\t RIGHT: "+defined_options.get(i).getY().get(j).getX());
+      }
+    }
+    return buildJson();
+  }
+
+  public static String buildJson(){
+    JSONObject returnObj = new JSONObject();
+    if(waypoints.size()>0){
+      JSONObject routesObj = new JSONObject();
+      routesObj.put("origin",waypoints.getFirst().getX());
+      routesObj.put("destination",waypoints.getLast().getX());
+      JSONArray waypointsArray = new JSONArray();
+      for(int i = 1; i < waypoints.size() - 1; i++){
+        JSONObject waypointObj = new JSONObject();
+        waypointObj.put("location", waypoints.get(i).getX());
+        waypointsArray.put(waypointObj);
+      }
+      routesObj.put("waypoints",waypointsArray);
+      routesObj.put("travelMode",travel_mode);
+      JSONObject transitOptions = new JSONObject();
+      if(travel_mode.equals(TRANSIT_VAL)){
+        transitOptions.put("modes",new JSONArray().put(transit_mode));
+        routesObj.put("transitOptions",transitOptions);
+      }
+      if(travel_mode.equals(DRIVING_VAL)){
+        JSONObject drivingOptions = new JSONObject();
+        //routesObj.put("drivingOptions",drivingOptions);
+      }
+      for(int i = 0 ; i<undefined_options.size() ; i++){
+        switch(undefined_options.get(i).getX()){
+          case MULTIPLE_VAL:
+          routesObj.put("provideRouteAlternatives",true);
+          break;
+          case WALKING_VAL:
+          transitOptions.put("routingPreference",WALKING_VAL);
+          break;
+          case TRANSFER_VAL:
+          transitOptions.put("routingPreference",TRANSFER_VAL);
+          break;
+          case OPTIMIZE_VAL:
+          routesObj.put("optimizeWaypoints", true);
+          break;
+        }
+      }
+      for(int i = 0 ; i<defined_options.size() ; i++){
+        for(int j=0;j<defined_options.get(i).getY().size();j++){
+          if(defined_options.get(i).getX().getX().equals("avoid")){
+            if(defined_options.get(i).getY().get(j).getX().equals(TOLLS_VAL)){
+              routesObj.put("avoidTolls",true);
+            }
+            else if(defined_options.get(i).getY().get(j).getX().equals(HIGHWAY_VAL)){
+              routesObj.put("avoidHighways",true);
+            }
+          }
+          else if(defined_options.get(i).getX().getX().equals(DEPARTURE_VAL)){
+            transitOptions.put("departureTime",defined_options.get(i).getY().get(j).getX());
+          }
+          else if(defined_options.get(i).getX().getX().equals(ARRIVAL_VAL)){
+            transitOptions.put("arrivalTime",defined_options.get(i).getY().get(j).getX());
+          }
+        }
+      }
+      returnObj.put("routes",routesObj);
+    }
+
+    JSONArray placesArray = new JSONArray();
+    for(int i = 0; i < places.size(); i++){
+    for(int j = 0 ; j < places.get(i).size(); j++){
+      JSONObject place = new JSONObject();
+      place.put("place",places.get(i).get(j).getX()).put("near",places_near.get(i).getX());
+      placesArray.put(place);
+    }
+  }
+  if(places.size()>0){
+    returnObj.put("places",placesArray);
+  }
+
+    JSONArray errorsArray = new JSONArray();
+    for(int i = 0 ; i < errors.size(); i++)
+    {
+      JSONObject error = new JSONObject();
+      error.put("error", errors.get(i).getX());
+      error.put("col", errors.get(i).getY());
+      errorsArray.put(error);
+    }
+    if(errors.size()>0){
+      returnObj.put("errors",errorsArray);
+    }
+    returnObj.put("nodeStructure", ast_json);
+    System.out.println(ast_json);
+    return returnObj.toString();
+    /*int i = 0;
+    JSONObject waypointsJSON = new JSONObject();
+    JSONArray waypointsSubArr = new JSONArray();
+
+    waypointsJSON.put("source", waypoints.getFirst().getX());
+    waypointsJSON.put("destiny", waypoints.getLast().getX());
+    for(i = 1; i < waypoints.size() - 1; i++){
+    JSONObject waypointsJSONsub = new JSONObject();
+    waypointsJSONsub.put("waypoint", waypoints.get(i).getX());
+    waypointsSubArr.put(waypointsJSONsub);
+  }
+
+  waypointsJSON.put("sub_waypoints",waypointsSubArr);
+
+  JSONArray waypointsArr = new JSONArray();
+  waypointsArr.put(waypointsJSON);
+
+
+  JSONArray locomotionArr = new JSONArray();
+  for(i = 0; i < locomotions.size(); i++){
+  JSONObject locomotionJSON = new JSONObject();
+  locomotionJSON.put("locomotion", locomotions.get(i).getX());
+  locomotionArr.put(locomotionJSON);
+}
+
+JSONObject placesJSON = new JSONObject();
+JSONArray placesArr = new JSONArray();
+for(i = 0; i < places.size(); i++){
+for(int j = 0 ; j < places.get(i).size(); j++){
+placesJSON.put("place", places.get(i).get(j).getX());
+}
+placesArr.put(placesJSON);
+placesJSON = new JSONObject();
+}
+
+
+JSONArray placesNearArr = new JSONArray();
+for(i = 0 ; i < places_near.size(); i++){
+JSONObject placesNearJSON = new JSONObject();
+placesNearJSON.put("place", places_near.get(i).getX());
+placesNearArr.put(placesNearJSON);
+}
+
+
+
+
+
+JSONArray undefinedOptionsArr = new JSONArray();
+for(i = 0 ; i < undefined_options.size(); i++){
+JSONObject undefinedOptionsJSON = new JSONObject();
+undefinedOptionsJSON.put("undefined_option", undefined_options.get(i).getX());
+undefinedOptionsArr.put(undefinedOptionsJSON);
+}
+
+JSONArray definedOptionsArr = new JSONArray();
+
+for(i = 0; i < defined_options.size() ; i++){
+switch(defined_options.get(i).getX().getX()){
+case "avoid":
+for(int j = 0; j < defined_options.get(i).getY().size() ; j++){
+JSONObject definedOptionsAvoid = new JSONObject();
+definedOptionsAvoid.put("avoid", defined_options.get(i).getY().get(j).getX());
+definedOptionsArr.put(definedOptionsAvoid);
+}
+break;
+case "departure_time":
+for(int j = 0; j < defined_options.get(i).getY().size() ; j++){
+JSONObject definedOptionsDeparture = new JSONObject();
+definedOptionsDeparture.put("departure", defined_options.get(i).getY().get(j).getX());
+definedOptionsArr.put(definedOptionsDeparture);
+}
+break;
+case "arrival_time":
+for(int j = 0; j < defined_options.get(i).getY().size() ; j++){
+JSONObject definedOptionsArrival = new JSONObject();
+definedOptionsArrival.put("arrival", defined_options.get(i).getY().get(j).getX());
+definedOptionsArr.put(definedOptionsArrival);
+}
+break;
+default:
+System.out.println("Erro encontrado =============!=============" + defined_options.get(i).getX().getX());
+break;
+}
+}
+
+JSONArray errorsArr = new JSONArray();
+JSONObject errorsJSON = new JSONObject();
+for(i = 0 ; i < errors.size(); i++){
+JSONObject error = new JSONObject();errorsJSON.put("error", errors.get(i).getX());
+errorsArr.put(errorsJSON);
+}
+
+
+
+
+JSONObject mainObj = new JSONObject();
+
+//mainObj.put("keywords", byKeywordArr);
+mainObj.put("locomotion", locomotionArr);
+mainObj.put("waypoints",waypointsArr);
+mainObj.put("places", placesArr);
+mainObj.put("places_near", placesNearArr);
+mainObj.put("definedOptions", definedOptionsArr);
+mainObj.put("undefinedOptions", undefinedOptionsArr);
+mainObj.put("errors", errorsArr);
+
+System.out.println(mainObj.toString());
+return mainObj.toString();*/
+}
+}
+
+PARSER_END(Navigator)
+
+SKIP :
+{ " "| "\t"| "\r"
+}
+
+TOKEN : /* basic */
+{
+  < SOURCE: "from" >
+  | < SUBJECT : "I"|"You" >
+  | < VERB : "want"|"wish"|"would like"|"require" >
+  | < ACTION : "to go" >
+  | < TO : "to" >
+  | < ADDITIVE : "and go through" >
+  | < BY : "by" >
+  | < LOCOMOTION : "bus"|"train"|"car"|"bicycle"|"subway"|"tram" >
+  | < AT : "at" >
+  | < DEPARTURE : "departure" | "leaving" >
+  | < ARRIVAL : "arriv" ("ing" | "al") >
+  | < TIME : "20"(["0"-"9"]){2}("-"|"/")((("0")?["1"-"9"])|("1" (["0"-"2"])?))("-"|"/")((("0")?["1"-"9"])|(("1" | "2")["0"-"9"])|("3"("0" | "1")))(" ")*(((["0"-"1"])?["0"-"9"])|("2"["0"-"3"]))("-"|":")(["0"-"5"]["0"-"9"])>
+  | < FOOT : "on foot" >
+  | < COMMA : "," >
+  | < SEMICOLON : ";" >
+  | < AVOID : "avoid" ("ing")? >
+  | < TOLL : "toll"("s")? >
+  | < HIGHWAY : "highway"("s")? >
+  | < FERRY : "ferry" | "ferries" >
+  | < MULTIPLE : "multiple" >
+  | < LESS : "less" | "fewer" | "reduce" >
+  | < ROUTE : "route" ("s")? >
+  | < WALKING : "walking" >
+  | < TRANSFER : "transfer" ("s")? >
+  | < OPTIMIZE : "optimize" >
+  | < SHOW : "show" >
+  | < NEAR : "near" >
+  | < DESTINATION : "destination" >
+  | < ORIGIN : "origin" >
+  | < NAME : ["A"-"Z","a"-"z","0"-"9","\'"](["A"-"Z","a"-"z","0"-"9", "\u00C0"-"\u00C3" , "\u00C7"-"\u00CA", "\u00CD", "\u00D2"-"\u00D5", "\u00D9"-"\u00DB", "\u00E0"-"\u00E3", "\u00E7"-"\u00EA", "\u00EC"-"\u00ED", "\u00F2"-"\u00F5", "\u00F9"-"\u00FB", "\'"])* >
+}
+
+SimpleNode Start() :{}
+  {
+    Expression()
+    {
+      return jjtThis;
+    }
+  }
+
+  void Location(int location_type): {Token t1; Integer col;}
+  {
+    (t1 = <NAME> | t1 = <LOCOMOTION> | t1 = <VERB> | t1 = <AT> | t1 = <ACTION> | t1 = <TIME> | t1 = <ROUTE> | t1 = <WALKING> | t1 = <TRANSFER> | t1 = <FERRY> | t1 = <HIGHWAY> | t1 = <TOLL>)
+    {
+      col = t1.beginColumn;
+      jjtThis.image = t1.image;
+    }
+    ((t1 = <COMMA>{jjtThis.image += " " + t1.image;})?
+    (t1 = <NAME> | t1 = <LOCOMOTION> | t1 = <VERB> | t1 = <AT> | t1 = <ACTION> | t1 = <TIME> | t1 = <ROUTE> | t1 = <WALKING> | t1 = <TRANSFER> | t1 = <FERRY> | t1 = <HIGHWAY> | t1 = <TOLL>)
+    {
+      jjtThis.image += " " + t1.image;
+    }
+    )*
+    {
+      if(location_type == WAYPOINT){
+        if(waypoints.size() > 1){
+          waypoints.add(waypoints.size() - 1, new Pair(jjtThis.image, col));
+        }
+        else{
+          waypoints.add(new Pair(jjtThis.image, col));
+        }
+      }
+      else if(location_type == PLACE){
+        //when places has the same size as place_near and is reading a place, needs to alocate space for new place_near correspondant places
+        if(places.size() == places_near.size()){
+          places.add(new LinkedList<Pair<String, Integer>>());
+        }
+        places.getLast().add(new Pair(jjtThis.image, col));
+      }
+      else if(location_type == PLACENEAR){
+        places_near.add(new Pair(jjtThis.image, col));
+      }
+    }
+  }
+
+  void Waypoints() : {}
+    {
+      <ADDITIVE> Location(WAYPOINT) (<SEMICOLON> Location(WAYPOINT))*
+    }
+
+    void Options() #void: {}
+      {
+        Avoid()
+        | TravelMode()
+        | Departure()
+        | Arrival()
+        | MultipleRoutes()
+        | OptimizeRoute()
+        | (<LESS> (LessWalking() | FewerTransfers()))
+      }
+
+      void Avoid() : {Token t1;}
+      {
+        t1 = <AVOID>{defined_options.add(new Pair(new Pair("avoid", t1.beginColumn), new LinkedList<Pair<String, Integer>>()));} (ToAvoid())*
+      }
+
+      void ToAvoid() : {Token t1;}
+      {
+        t1 = <TOLL>{
+          defined_options.getLast().getY().add(new Pair(TOLLS_VAL, t1.beginColumn));
+        }
+        | t1 = <HIGHWAY>{
+          defined_options.getLast().getY().add(new Pair(HIGHWAY_VAL, t1.beginColumn));
+        }
+        | t1 = <FERRY>{
+          defined_options.getLast().getY().add(new Pair(FERRIES_VAL, t1.beginColumn));
+        }
+      }
+
+      void TravelMode() : {Token t1;}
+      {
+        (t1 = <BY>{by_keyword.add(t1.beginColumn);} (Locomotion())* | t1 = <FOOT>{jjtThis.image = t1.image; locomotions.add(new Pair(WALKING_MODE_VAL, t1.beginColumn));})
+      }
+
+      void Locomotion() : {Token t1;}
+      {
+        t1=<LOCOMOTION>{
+          if(t1.image.equals("car")){
+            t1.image = DRIVING_VAL;
+          }
+          else if(t1.image.equals("bicycle")){
+            t1.image = BICYCLE_VAL;
+          }
+          jjtThis.image = t1.image;
+          locomotions.add(new Pair(t1.image, t1.beginColumn));
+        }
+      }
+
+      void Departure() : {Token t1;}
+      {
+        t1=<DEPARTURE>{defined_options.add(new Pair(new Pair(DEPARTURE_VAL, t1.beginColumn), new LinkedList<Pair<String, Integer>>()));} (<AT>)? t1=<TIME>{
+          jjtThis.image = t1.image;
+          defined_options.getLast().getY().add(new Pair(t1.image, t1.beginColumn));
+        }
+      }
+
+      void Arrival() : {Token t1;}
+      {
+        t1=<ARRIVAL>{defined_options.add(new Pair(new Pair(ARRIVAL_VAL, t1.beginColumn), new LinkedList<Pair<String, Integer>>()));} (<AT>)? t1=<TIME>{
+          jjtThis.image = t1.image;
+          defined_options.getLast().getY().add(new Pair(t1.image, t1.beginColumn));
+        }
+      }
+
+      void MultipleRoutes() : {Token t1;}
+      {
+        t1 = <MULTIPLE> <ROUTE>{
+          undefined_options.add(new Pair(MULTIPLE_VAL, t1.beginColumn));
+        }
+      }
+
+      void LessWalking() : {Token t1;}
+      {
+        t1 = <WALKING>{
+          undefined_options.add(new Pair(WALKING_VAL, t1.beginColumn));
+        }
+      }
+
+      void FewerTransfers() : {Token t1;}
+      {
+        t1 = <TRANSFER>{
+          undefined_options.add(new Pair(TRANSFER_VAL, t1.beginColumn));
+        }
+      }
+
+      void OptimizeRoute() : {Token t1;}
+      {
+        t1 = <OPTIMIZE> <ROUTE>{
+          undefined_options.add(new Pair(OPTIMIZE_VAL, t1.beginColumn));
+        }
+      }
+
+      void Places() #void : {}
+        {
+          <SHOW> Place() (<SEMICOLON> Place() )*
+        }
+
+        void Place() :{}
+          {
+            Location(PLACE) <NEAR> (PlaceNear())
+          }
+
+          void PlaceNear() :{Token t1;}
+          {
+            (t1 = <ORIGIN>#Origin{ places_near.add(new Pair(ORIGIN_VAL, t1.beginColumn));}) | (t1 = <DESTINATION>#Destination{places_near.add(new Pair(DESTINATION_VAL, t1.beginColumn));})
+            | Location(PLACENEAR)
+          }
+
+          void StartFinish() #void:{}
+            {
+              Location(WAYPOINT) <TO> Location(WAYPOINT)
+            }
+
+
+            void Path() :{}
+              {
+                StartFinish() (Waypoints())? (Options())*
+              }
+
+              void MainPath() #void: {}
+                {
+                  (<SUBJECT ><VERB ><ACTION> <SOURCE>|<SOURCE>)? Path()
+                }
+
+                void Expression() #void: {}
+                  {
+                    ((MainPath() (Places())*)
+                    |
+                    (Places())+)
+                    <EOF>
+                  }

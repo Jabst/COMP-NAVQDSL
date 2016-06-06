@@ -1,0 +1,113 @@
+<!DOCTYPE HTML>
+<head>
+    <style>
+      #map {
+        width: 500px;
+        height: 400px;
+      }
+    </style>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+</head>
+<body>
+<div id="map"></div>
+<hr>
+<applet code="interface.Test.class" width="300px" height="200px">
+<param name="printString" value="puta">
+</applet>
+<hr>
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDOicoxolt-RV5FO8MoTB3QeJO2YslPIgM&libraries=places"></script>
+<script>
+  var pombal;
+  var geocoder = new google.maps.Geocoder();
+  var map;
+          var restaurant1;
+    function initialize() {
+
+
+      geocoder.geocode({
+          'address': "Belém Lisbon"
+        },
+        function(results, status) {
+          pombal = results[0].geometry.location;
+          map = new google.maps.Map(document.getElementById('map'), {
+            center: pombal,
+            zoom: 15,
+            scrollwheel: false
+          });
+          // Specify location, radius and place types for your Places API search.
+          var request = {
+            query: "restaurants in Lisbon",
+          };
+
+          var request2 = {
+            query: "cinemas in Lisbon"
+          };
+
+
+
+          // Create the PlaceService and send the request.
+          // Handle the callback with an anonymous function.
+          var service = new google.maps.places.PlacesService(map);
+          service.textSearch(request, function(results, status) {
+            if (status == google.maps.places.PlacesServiceStatus.OK) {
+              //meter centro como o place se calhar na gramática poder dizer que o início é um place e não uma rua
+              //map.setCenter(results[0].geometry.location);
+              restaurant1 = results[0].geometry.location;
+              for (var i = 0; i < results.length; i++) {
+                var place = results[i];
+                // If the request succeeds, draw the place location on
+                // the map as a marker, and register an event to handle a
+                // click on the marker.
+                var marker = new google.maps.Marker({
+                  map: map,
+                  label: "restaurant",
+                  position: place.geometry.location
+                });
+              }
+            }
+          });
+          service.textSearch(request2, function(results, status) {
+            if (status == google.maps.places.PlacesServiceStatus.OK) {
+              //meter centro como o place se calhar na gramática poder dizer que o início é um place e não uma rua
+              //map.setCenter(results[0].geometry.location);
+              for (var i = 0; i < results.length; i++) {
+                var place = results[i];
+                // If the request succeeds, draw the place location on
+                // the map as a marker, and register an event to handle a
+                // click on the marker.
+                var marker = new google.maps.Marker({
+                  map: map,
+                  label: "cinemas",
+                  position: place.geometry.location
+                });
+              }
+            }
+          });
+          var directionsService = new google.maps.DirectionsService;
+          var directionsDisplay = new google.maps.DirectionsRenderer;
+  directionsDisplay.setMap(map);
+          calculateAndDisplayRoute(directionsService, directionsDisplay)
+        });
+
+
+
+    }
+
+    function calculateAndDisplayRoute(directionsService, directionsDisplay) {
+      directionsService.route({
+        origin: pombal,
+        destination: "Amadora Lisbon",
+        travelMode: [google.maps.TravelMode.TRANSIT]
+      }, function(response, status) {
+        if (status === google.maps.DirectionsStatus.OK) {
+          directionsDisplay.setDirections(response);
+        } else {
+          window.alert('Directions request failed due to ' + status);
+        }
+      });
+    }
+
+      // Run the initialize function when the window has finished loading.
+      $(document).ready(initialize());
+</script>
+</body>
