@@ -34,7 +34,7 @@ We use a _JSON_ java library to create _JSON_ objects to respond to the requests
 
 ### Task Distribution
 * Ivo Fernandes - web interface, _JSON_ parsing and syntactic analysis.
-* Carlos Samouco -
+* Carlos Samouco - Syntactic analysis, creation of the Java Server and web interface.
 *	Gonçalo Lopes - Lexical Analysis, Syntactic Analysis, Semantic Analysis, generating _JSON_ for AST
 * José Teixeira - Lexical Analysis, generating _JSON_ from post-semantic analysis data structure to the web interface, Google Maps analysis
 
