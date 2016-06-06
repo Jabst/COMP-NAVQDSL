@@ -16,7 +16,7 @@ public class RequestHandler extends Thread{
 			sk.getInputStream().read(data, 0, data.length);
 			String[] data2 = new String(data, "UTF-8").split("\n");
 			System.out.println("Server Received: " + data2[data2.length - 1]);
-			sendResponse(compiler.Navigator.semanticAnalysis(data2[data2.length - 1]));
+			sendResponse(compiler.Navigator.NAVQDSL(data2[data2.length - 1]));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

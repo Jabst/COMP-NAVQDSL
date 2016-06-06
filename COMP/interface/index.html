@@ -152,15 +152,15 @@
         data: input,
         url: 'http://localhost:8080',
         success: function(data) {
+          if(updateErrorDialog(data.errors)) {
+            $("#tree-simple").html();
+          return;
+          }
           console.log(data);
           var tree_struct = {};
           tree_struct.chart = {container: "#query_tree"};
           tree_struct.nodeStructure = data.nodeStructure;
           new Treant(tree_struct);
-
-		  if(updateErrorDialog(data.errors)) {
-			return;
-		  }
 
           //PLACES
           if(data.places){

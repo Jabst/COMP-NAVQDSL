@@ -65,7 +65,8 @@ public class Navigator
   private static LinkedList<Pair<String, Integer>> locomotions;
   //list of waypoints and col where each starts
   private static LinkedList<Pair<String, Integer>> waypoints;
-  //list of list of places and col where each starts, it hold a list of places for every places_near
+  //list of list of places and col where each starts
+  //it holds a list of places for every places_near
   private static LinkedList<LinkedList<Pair<String, Integer>>> places;
   //list of places_near and col where each starts
   private static LinkedList<Pair<String, Integer>> places_near;
@@ -74,37 +75,7 @@ public class Navigator
   //list of defined options, for each start of the defined option, the col is known, and the col for each parameter is also known
   private static LinkedList<Pair<Pair<String, Integer>, LinkedList<Pair<String, Integer>>>> defined_options;
 
-
-  public static void main(String[] args) throws IOException  {    System.out.println("Reading from standard input...");
-    System.out.println("Enter an expression like: ... from A to B ...");
-
-    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-    String s = br.readLine();
-
-    semanticAnalysis(s);
-  }
-
-  public static String semanticAnalysis(String text) {
-    try
-    {
-      errors = new LinkedList<Pair<String, Integer>>();
-      by_keyword = new LinkedList<Integer>();
-      locomotions = new LinkedList<Pair<String, Integer>>();
-      waypoints = new LinkedList<Pair<String, Integer>>();
-      places = new LinkedList<LinkedList<Pair<String, Integer>>>();
-      places_near = new LinkedList<Pair<String, Integer>>();
-      undefined_options = new LinkedList<Pair<String, Integer>>();
-      defined_options = new LinkedList<Pair<Pair<String, Integer>, LinkedList<Pair<String, Integer>>>>();
-      SimpleNode n = new Navigator(new ByteArrayInputStream(text.getBytes())).Start();
-      ast_json = n.dump();
-    }
-    catch(TokenMgrError e){
-      errors.add(new Pair("Special characters unsuported", e.getCol()));
-    }
-    catch (ParseException e)
-    {
-      errors.add(new Pair("Insert query example here", e.currentToken.endColumn + 2));
-    }
+  private static semanticAnalysis(){
     int check, inner_check, inner_inner_check;
     Pair<String, Integer> error;
 
@@ -117,8 +88,11 @@ public class Navigator
 
     //checking locomotions
     /*
-    departure or arrival if subway train tram or bus
+    departure or arrival if subway train tram or bus, error otherwise
+    error if 2 departure or arrival
+
     if subway train and tram = rail
+    if there's more than 1 locomotion and it's not {subway, train, tram} -> error
     */
     if(locomotions.size() == 0){
       travel_mode = DRIVING_VAL;
@@ -161,7 +135,7 @@ public class Navigator
             errors.add(new Pair("Locomotions can only be empty, one value or [subway, train, tram]", locomotions.get(i).getY()));
       }
     }
-    //checking waypoints
+    //checking waypoints, two waypoints in a row are an error
     int waypoints_size = waypoints.size();
     for(check = 0; check < waypoints_size - 1; check++){
       if(waypoints.get(check).getX().equals(waypoints.get(check + 1).getX())){
@@ -170,13 +144,19 @@ public class Navigator
     }
 
     //checking places_near
+    //checks for Origin and Destination variables
+    //checks if morethan 1 places_near is defined for a given location
     int places_near_size = places_near.size();
     for(check = 0; check < places_near_size; check++){
       error = places_near.get(check);
       if(error.getX() == ORIGIN_VAL){
-        if(waypoints.size() > 0)        {			 places_near.set(check, new Pair(waypoints.getFirst().getX(), error.getY()));
+        if(waypoints.size() > 0)
+        {
+			 places_near.set(check, new Pair(waypoints.getFirst().getX(), error.getY()));
         }
-        else        {			 errors.add(new Pair("Origin Not Set!", error.getY()));
+        else
+        {
+			 errors.add(new Pair("Origin Not Set!", error.getY()));
         }
       }
       else if(places_near.get(check).getX() == DESTINATION_VAL){
@@ -200,7 +180,7 @@ public class Navigator
       }
     }
 
-    //checking places
+    //checks if a place was already defined for a location
     int places_size = places.size();
     for(check = 0; check < places_size; check++){
       LinkedList<Pair<String, Integer>> places_check = places.get(check);
@@ -216,12 +196,13 @@ public class Navigator
     }
 
     //checking undefined options
+    //can only choose less walking of fewer transfers if public transportation, transit mode
     int undefined_options_size = undefined_options.size();
     for(check = 0; check < undefined_options_size; check++){
       for(inner_check = check + 1; inner_check < undefined_options_size; inner_check++){
         error = undefined_options.get(inner_check);
-        System.out.println(error.getX());
         if(error.getX().equals(WALKING_VAL) || error.getX().equals(TRANSFER_VAL)){
+          if(!travel_mode.equals(TRANSIT_VAL))
           errors.add(new Pair("May only specify LESS_WALKING and FEWER_TRANSFERS if using public transportation", error.getY()));
         }
         else if(error.getX().equals(MULTIPLE_VAL)){
@@ -238,7 +219,7 @@ public class Navigator
       }
     }
 
-    //checking defined options
+    //checking defined options, can only have 1 of arrival or departure and if using public transportation
     boolean has_arrival = false;
     boolean has_departure = false;
     int defined_options_size = defined_options.size();
@@ -268,6 +249,7 @@ public class Navigator
         }
       }
 
+      //checks defined options, if an option was already defined -> error
       LinkedList<Pair<String, Integer>> defined_options_check = defined_options.get(check).getY();
       int defined_options_check_size = defined_options_check.size();
       for(inner_check = 0; inner_check < defined_options_check_size; inner_check++){
@@ -279,17 +261,31 @@ public class Navigator
         }
       }
     }
-    System.out.println("UNDEFINED_OPTION");
-    for(int i = 0 ; i<undefined_options.size() ; i++){
-      System.out.println("X: "+undefined_options.get(i).getX()+" , Y: "+undefined_options.get(i).getY());
+  }
+
+
+  public static String NAVQDSL(String text) {
+    errors = new LinkedList<Pair<String, Integer>>();
+    by_keyword = new LinkedList<Integer>();
+    locomotions = new LinkedList<Pair<String, Integer>>();
+    waypoints = new LinkedList<Pair<String, Integer>>();
+    places = new LinkedList<LinkedList<Pair<String, Integer>>>();
+    places_near = new LinkedList<Pair<String, Integer>>();
+    undefined_options = new LinkedList<Pair<String, Integer>>();
+    defined_options = new LinkedList<Pair<Pair<String, Integer>, LinkedList<Pair<String, Integer>>>>();
+    try
+    {
+      SimpleNode n = new Navigator(new ByteArrayInputStream(text.getBytes())).Start();
+      ast_json = n.dump();
     }
-    System.out.println("DEFINED_OPTION");
-    for(int i = 0 ; i<defined_options.size() ; i++){
-      System.out.println("LEFT: "+defined_options.get(i).getX().getX());
-      for(int j=0;j<defined_options.get(i).getY().size();j++){
-        System.out.println("\t RIGHT: "+defined_options.get(i).getY().get(j).getX());
-      }
+    catch(TokenMgrError e){
+      errors.add(new Pair("Special characters unsuported", e.getCol()));
     }
+    catch (ParseException e)
+    {
+      errors.add(new Pair(e.getMessage(), e.currentToken.endColumn + 2));
+    }
+
     return buildJson();
   }
 
