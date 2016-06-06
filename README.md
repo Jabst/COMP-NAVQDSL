@@ -17,11 +17,12 @@ Our language handles all the possible options that the Google maps _API_ offers,
 If the tool detects syntactic errors it returns to the user an error message, specifying what went wrong.
 
 ### Semantic Analysis
-We analysed the Google _API_ and identified some semantic errors that we would need to be aware of:
+We analyzed the Google _API_ and identified some semantic errors that we would need to be aware of:
 * specifying multiple means of transport, multiple by definitions.
 * specifying multiple locations for places, multiple near definitions.
 * LESS_WALKING, FEWER_TRANSFERS optimization options can only be used when the means of transport is Transit as well as the options ARRIVAL_TIME and DEPARTURE_TIME.
-* OPTIMIZE_ROUTE option can only be used if the user defines two or more waypoints.
+* OPTIMIZE_ROUTE option can only be used if the user defines two or more waypoints
+* If specifying more than one mean of transport, must specify {train, tram, subway}
 
 
 ### Intermediate Representations (IRs)
@@ -34,7 +35,7 @@ We use a _JSON_ java library to create _JSON_ objects to respond to the requests
 ### Task Distribution
 * Ivo Fernandes - web interface, _JSON_ parsing and syntactic analysis.
 * Carlos Samouco -
-*	Gonçalo Lopes -
+*	Gonçalo Lopes - Lexical Analysis, Syntactic Analysis, Semantic Analysis, generating _JSON_ for AST
 * José Teixeira -
 
 ### How to use
@@ -52,7 +53,13 @@ Note that Internet connection is needed.
 
 ### Pros
 
- (Identify the most positive aspects of your tool)
+A fun implementation of a compiler course project.
+
+Good interface and error display.
+
+Fully functional as a NAVQDSL.  
+
+AST visual display.
 
 
 ### Cons
