@@ -36,7 +36,20 @@ We use a _JSON_ java library to create _JSON_ objects to respond to the requests
 * Carlos Samouco -
 *	Gonçalo Lopes -
 * José Teixeira -
+* 
 
+### How to use
+
+For the web browser to communicate with our native Java program it is needed to open a socket and have it listening to the 8080 port. That said, it is necessary for a server to be running on the user's machine.
+
+So step by step the user has to:
+
+* Open the web interface
+* Start the Java application
+
+After these steps the user can type in the input field on the web interface.
+
+Note that Internet connection is needed.
 
 ### Pros
 
