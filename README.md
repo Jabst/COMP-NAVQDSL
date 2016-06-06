@@ -64,4 +64,4 @@ AST visual display.
 
 ### Cons
 
- (Identify the most negative aspects of your tool)
+* The Treant _API_ does not support some special characters on its tree display(for instance, ç)
